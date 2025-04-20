@@ -76,7 +76,6 @@ async function selectImage() {
         core.executeAsModal(
             async () => {
                 // Open a file given entry
-                const myFileName = "myFile.png";
                 const {localFileSystem} = require("uxp").storage;
 
                 // 単一ファイル選択ダイアログを表示
@@ -90,14 +89,25 @@ async function selectImage() {
                     console.log("ファイルが選択されませんでした");
                     return;
                 }
+                // copy to temp folder
                 const tempFolder = await localFileSystem.getTemporaryFolder();
                 await file.copyTo(tempFolder, {overwrite: true});
+
+                //rename file in Temp folder
+                const myFileName = "myFile.png";
                 const fileName = file.name;
 
-                console.log("選択されたファイル名:", fileName);
+                const myTempFile = await tempFolder.getEntry( fileName );
+                console.log("選択されたファイル名:", myTempFile.name);
 
-                const tmpFile = await tempFolder.getEntry(fileName);
+                // reason using moveto is that rename is not support? rename dont work
+                await myTempFile.moveTo(tempFolder, {newName: myFileName, overwrite: true})
 
+
+
+
+                const tmpFile = await tempFolder.getEntry( myFileName );
+                console.log("tmpFile path:", tmpFile.nativePath);
                 //photoshop で開く
                 //const mydocument = await app.open(tmpFile);
 
