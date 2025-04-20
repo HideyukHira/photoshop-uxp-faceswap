@@ -12,7 +12,14 @@
   "manifestVersion": 5,
   "requiredPermissions": {
     "localFileSystem": "fullAccess",
-    "launchProcess": {
+    "network": {
+      "domains": [
+        "http://127.0.0.1",
+        "http://127.0.0.1:7860",
+        "http://localhost"
+      ]
+    },
+      "launchProcess": {
       "schemes": ["http", "https", "mailto"],
       "extensions": [".png", ".jpg", ".pdf"]
     }
