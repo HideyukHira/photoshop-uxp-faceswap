@@ -165,16 +165,25 @@ async function faceSwap() {
                 });
                 // console.log("sourceBase64:",sourceBase64);
                 sourceDocument.close();
+                console.log("sourceBase64:",sourceBase64);
 
 
                 // 2. 現在のドキュメント（ターゲット画像）の取得
                 const tartgetDocment = app.activeDocument;
                 // 6. ターゲット画像（現在のレイヤー）をBase64に変換
+                console.log("tartgetDocment:",tartgetDocment);
+                const targetLayers = tartgetDocment.layers;
+                // 最上部のレイヤーを求める
+                const targetLayer = targetLayers[targetLayers.length - 1];
+                console.log("targetLayer:",targetLayer);
+
                 const targetImageObj = await imaging.getPixels({
                     documentID: tartgetDocment._id,
-                    layerID: tartgetDocment.activeLayers[0]._id
+                    layerID:targetLayer._id
                 });
 
+
+                console.log("tartgetDocment.activeLayers[0]._id:",tartgetDocment.activeLayers[0]._id);
                 console.log("targetDocument:",tartgetDocment);
                 console.log("targetImageObj:",targetImageObj);
 
@@ -272,6 +281,7 @@ async function faceSwap() {
 
                         const newLayer = currentDocument.activeLayers[0];
                         await newLayer.moveAbove(currentDocument.layers[0]);
+                        newLayer.name = "Face Swap Result";
 
 
 
