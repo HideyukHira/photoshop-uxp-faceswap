@@ -167,24 +167,8 @@ async function faceSwap() {
                 sourceDocument.close();
 
 
-
                 // 2. 現在のドキュメント（ターゲット画像）の取得
                 const tartgetDocment = app.activeDocument;
-                if (!tartgetDocment) {
-                    console.log("開いているドキュメントがありません");
-                    return;
-                }
-
-
-
-                // 3. 現在のレイヤーを取得
-                const activeLayer = tartgetDocment.activeLayers[0];
-                if (!activeLayer) {
-                    console.log("アクティブなレイヤーがありません");
-                    return;
-                }
-
-
                 // 6. ターゲット画像（現在のレイヤー）をBase64に変換
                 const targetImageObj = await imaging.getPixels({
                     documentID: tartgetDocment._id,
@@ -207,8 +191,8 @@ async function faceSwap() {
                 console.log("ターゲット画像Base64取得完了");
 
                 // 確認のためにログ出力
-                console.log("ソースBase64の先頭部分:", sourceBase64.substring(0, 50));
-                console.log("ターゲットBase64の先頭部分:", targetBase64.substring(0, 50));
+                // console.log("ソースBase64の先頭部分:", sourceBase64.substring(0, 50));
+                // console.log("ターゲットBase64の先頭部分:", targetBase64.substring(0, 50));
 
                 // ソースとターゲットが同じでないことを確認
                 if (sourceBase64 === targetBase64) {
@@ -265,29 +249,29 @@ async function faceSwap() {
                         // Base64データからプレフィックスを削除
                         const base64Data = result.image.replace(/^data:image\/\w+;base64,/, "");
 
-                    // 修正版：ファイルからレイヤーを作成する部分
-                    // 一時ファイルからビットマップを作成し、それを新規レイヤーとして配置
+                        // 修正版：ファイルからレイヤーを作成する部分
+                        // 一時ファイルからビットマップを作成し、それを新規レイヤーとして配置
 
-                    // Base64をデコードして一時ファイルに保存
-                    const resultFile = await tempFolder.createFile("result.png", { overwrite: true });
-                    await resultFile.write(base64ToArrayBuffer(base64Data));
+                        // Base64をデコードして一時ファイルに保存
+                        const resultFile = await tempFolder.createFile("result.png", { overwrite: true });
+                        await resultFile.write(base64ToArrayBuffer(base64Data));
 
-                    // 代替アプローチ：ファイルからドキュメントを作成し、それをレイヤーとしてインポート
+                        // 代替アプローチ：ファイルからドキュメントを作成し、それをレイヤーとしてインポート
 
 
 
-                            // アクティブドキュメントを取得
-                            const currentDocument = app.activeDocument;
-                            const myresultFile = await tempFolder.getEntry("result.png");
-                            const tempDocument = await app.open(myresultFile);
+                        // アクティブドキュメントを取得
+                        const currentDocument = app.activeDocument;
+                        const myresultFile = await tempFolder.getEntry("result.png");
+                        const tempDocument = await app.open(myresultFile);
 
-                            const placedLayer = tempDocument.layers[0];
-                            await placedLayer.duplicate(currentDocument);
+                        const placedLayer = tempDocument.layers[0];
+                        await placedLayer.duplicate(currentDocument);
 
-                            await tempDocument.closeWithoutSaving();
+                        await tempDocument.closeWithoutSaving();
 
-                            const newLayer = currentDocument.activeLayers[0];
-                            await newLayer.moveAbove(currentDocument.layers[0]);
+                        const newLayer = currentDocument.activeLayers[0];
+                        await newLayer.moveAbove(currentDocument.layers[0]);
 
 
 
