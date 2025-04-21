@@ -137,7 +137,7 @@ async function faceSwap() {
                 // 4. imaging モジュールを取得
                 const imaging = require("photoshop").imaging;
 
-                // 1. ソース画像（選択した画像）の取得
+                // ソース画像（選択した画像）の取得
                 const tempFolder = await localFileSystem.getTemporaryFolder();
                 const tmpFile = await tempFolder.getEntry(myFileName);
                 if (!tmpFile) {
@@ -145,10 +145,9 @@ async function faceSwap() {
                     return;
                 }
 
-
-                // 5. ソース画像をBase64に変換
                 // 一時的にファイルを開いて画像データを取得
                 const sourceDocument = await app.open(tmpFile);
+                // Document指定 レイヤー指定し ImageObj 取得
                 const sourceImageObj = await imaging.getPixels({
                     documentID: sourceDocument._id,
                     layerID: sourceDocument.activeLayers[0]._id
@@ -157,37 +156,36 @@ async function faceSwap() {
                 console.log("sourceDocument:",sourceDocument);
                 console.log("sourceImageObj:",sourceImageObj);
 
-
                 // Base64エンコード
                 const sourceBase64 = await imaging.encodeImageData({
                     imageData: sourceImageObj.imageData,
                     base64: true,
                 });
-                // console.log("sourceBase64:",sourceBase64);
                 sourceDocument.close();
-                console.log("sourceBase64:",sourceBase64);
+                //console.log("sourceBase64:",sourceBase64);
 
 
-                // 2. 現在のドキュメント（ターゲット画像）の取得
+                // 現在のドキュメント（ターゲット画像）の取得
+                // ターゲットのfaceswap対象は、最上位レイヤー
                 const tartgetDocment = app.activeDocument;
-                // 6. ターゲット画像（現在のレイヤー）をBase64に変換
                 console.log("tartgetDocment:",tartgetDocment);
                 const targetLayers = tartgetDocment.layers;
+                console.log("targetLayers length:",targetLayers.length);
                 // 最上部のレイヤーを求める
                 const targetLayer = targetLayers[targetLayers.length - 1];
                 console.log("targetLayer:",targetLayer);
-
+                // Document指定 レイヤー指定し ImageObj 取得
                 const targetImageObj = await imaging.getPixels({
                     documentID: tartgetDocment._id,
-                    layerID:targetLayer._id
+                    layerID:tartgetDocment.activeLayers[0]._id,
                 });
-
-
                 console.log("tartgetDocment.activeLayers[0]._id:",tartgetDocment.activeLayers[0]._id);
+                console.log("Layer kind:", tartgetDocment.activeLayers[0].kind);
+                console.log("layerID:targetLayer._id:",targetLayer._id);
                 console.log("targetDocument:",tartgetDocment);
                 console.log("targetImageObj:",targetImageObj);
 
-                // Base64エンコード
+                // ターゲット画像の（最上位layer） Base64エンコード
                 const targetBase64 = await imaging.encodeImageData({
                     imageData: targetImageObj.imageData,
                     base64: true,
@@ -199,10 +197,6 @@ async function faceSwap() {
                 console.log("ソース画像Base64取得完了");
                 console.log("ターゲット画像Base64取得完了");
 
-                // 確認のためにログ出力
-                // console.log("ソースBase64の先頭部分:", sourceBase64.substring(0, 50));
-                // console.log("ターゲットBase64の先頭部分:", targetBase64.substring(0, 50));
-
                 // ソースとターゲットが同じでないことを確認
                 if (sourceBase64 === targetBase64) {
                     console.error("エラー: ソース画像とターゲット画像が同一です");
@@ -210,7 +204,7 @@ async function faceSwap() {
                 }
 
 
-                // 7. APIリクエストの作成
+                // APIリクエストの作成
                 const requestData = {
                     source_image: "data:image/png;base64," + sourceBase64,
                     target_image: "data:image/png;base64," + targetBase64,
@@ -236,7 +230,7 @@ async function faceSwap() {
                     upscale_force: 0
                 };
 
-                // 8. API呼び出し（fetchの実装）
+                //API呼び出し（fetchの実装）
                 try {
                     const response = await fetch('http://localhost:7860/reactor/image', {
                         method: 'POST',
@@ -253,39 +247,30 @@ async function faceSwap() {
 
                     const result = await response.json();
 
-                    // 9. 返却されたBase64データを処理
+                    // 返却されたBase64データを処理
                     if (result && result.image) {
                         // Base64データからプレフィックスを削除
                         const base64Data = result.image.replace(/^data:image\/\w+;base64,/, "");
 
-                        // 修正版：ファイルからレイヤーを作成する部分
-                        // 一時ファイルからビットマップを作成し、それを新規レイヤーとして配置
 
                         // Base64をデコードして一時ファイルに保存
                         const resultFile = await tempFolder.createFile("result.png", { overwrite: true });
                         await resultFile.write(base64ToArrayBuffer(base64Data));
 
-                        // 代替アプローチ：ファイルからドキュメントを作成し、それをレイヤーとしてインポート
+                        // ファイルからドキュメントを作成し、それをレイヤーとしてインポート
 
-
-
-                        // アクティブドキュメントを取得
-                        const currentDocument = app.activeDocument;
                         const myresultFile = await tempFolder.getEntry("result.png");
+                        //結果データ取得用のtemp document
                         const tempDocument = await app.open(myresultFile);
 
                         const placedLayer = tempDocument.layers[0];
-                        await placedLayer.duplicate(currentDocument);
-
+                        await placedLayer.duplicate(tartgetDocment);
+                        // temp document close
                         await tempDocument.closeWithoutSaving();
 
-                        const newLayer = currentDocument.activeLayers[0];
-                        await newLayer.moveAbove(currentDocument.layers[0]);
+                        const newLayer = tartgetDocment.activeLayers[0];
+                        await newLayer.moveAbove(tartgetDocment.layers[0]);
                         newLayer.name = "Face Swap Result";
-
-
-
-
                         console.log("Face Swap処理が完了しました");
                     } else {
                         console.error("APIからの応答に画像データがありません");
@@ -295,7 +280,7 @@ async function faceSwap() {
                 }
 
                 // ソースドキュメントを閉じる
-                await sourceDocument.close();
+               // await sourceDocument.close();
             },
             {
                 commandName: "Face Swap - データ取得",
