@@ -11,7 +11,7 @@ This plugin provides a Face Swap function within Adobe Photoshop. It aims to swa
 - facemodel を選択可能に
 ## Current Stage
 - Able to display selected files in the plugin panel.
-- Able to select a facemodel.
+- Able to select a face model.
 
 ## 問題点
 - RGB8のみ変換
@@ -68,6 +68,7 @@ This plugin provides a Face Swap function within Adobe Photoshop. It aims to swa
 
 ## APIの仕様
 プラグインは以下のようなAPIリクエストを行います：
+```shell
 curl -X POST \
 'http://127.0.0.1:7860/reactor/image' \
 -H 'accept: application/json' \
@@ -96,12 +97,11 @@ curl -X POST \
 "random_image": 0,
 "upscale_force": 0
 }'
+```
 ## 開発環境
-- Node.js
 - Adobe UXP
 - Adobe Photoshop API
 ## Development Environment
-- Node.js
 - Adobe UXP
 - Adobe Photoshop API
 

@@ -67,22 +67,22 @@ entrypoints.setup({
 });
 
 
-// ファイル選択してそのパスを取得しプレビュー表示
+// Select a file, get its path and display a preview
 async function selectImage() {
     try {
 
         core.executeAsModal(
             async () => {
                 // Open a file given entry
-                // 単一ファイル選択ダイアログを表示
+                // Show single file selection dialog
                 const file = await localFileSystem.getFileForOpening({
                     types: ["png", "jpg", "jpeg"], // 許可される画像形式
                     allowMultiple: false, // 単一ファイル
                 });
 
-                // ファイルが選択されなかった場合
+                // If no file is selected
                 if (!file) {
-                    console.log("ファイルが選択されませんでした");
+                    console.log("No file selected");
                     return;
                 }
                 // copy to temp folder
@@ -92,7 +92,7 @@ async function selectImage() {
                 //rename file in Temp folder
                 const fileName = file.name;
                 const myTempFile = await tempFolder.getEntry( fileName );
-                console.log("選択されたファイル名:", myTempFile.name);
+                console.log("Selected file name:", myTempFile.name);
 
                 // reason using moveto is that rename is not support? rename dont work
                 await myTempFile.moveTo(tempFolder, {newName: myFileName, overwrite: true})
@@ -100,7 +100,7 @@ async function selectImage() {
 
                 const tmpFile = await tempFolder.getEntry( myFileName );
                 console.log("tmpFile path:", tmpFile.nativePath);
-                //photoshop で開く
+                //photoshop open
                 //const mydocument = await app.open(tmpFile);
                 const imgcontainer = document.getElementById("imgcontainer");
 
@@ -109,11 +109,11 @@ async function selectImage() {
         );
 
     } catch (err) {
-        console.error("ファイルを開けませんでした:", err);
+        console.error("Could not open file:", err);
     }
 }
 
-// APIリクエスト用のデフォルト設定をグローバル変数として定義
+// Define default settings for PI requests as global variables
 const defaultFaceSwapSettings = {
     source_faces_index: [0],
     face_index: [0],
@@ -123,7 +123,7 @@ const defaultFaceSwapSettings = {
     face_restorer: "CodeFormer",
     restorer_visibility: 1,
     restore_first: 1,
-    model: "inswapper_128.onnx", // デフォルトモデル
+    model: "inswapper_128.onnx", // model
     gender_source: 0,
     gender_target: 0,
     save_to_file: 0,
@@ -131,16 +131,16 @@ const defaultFaceSwapSettings = {
     device: "CUDA",
     mask_face: 1,
     select_source: 0,
-    face_model: "",  // フェイスモデルはデフォルトでは空
+    face_model: "",  // deafult: ""
     source_folder: "",
     random_image: 0,
     upscale_force: 0
 };
 
-// 現在の設定を保持する変数
+// Variables that hold the current settings
 let currentFaceSwapSettings = {...defaultFaceSwapSettings};
 
-// リクエストデータを生成する関数
+// A function that generates request data
 function createRequestData(sourceBase64, targetBase64) {
     return {
         source_image: "data:image/png;base64," + sourceBase64,
@@ -149,27 +149,28 @@ function createRequestData(sourceBase64, targetBase64) {
     };
 }
 
-// 設定を更新する関数
+// Functions that update settings
 function updateFaceSwapSettings(newSettings) {
     currentFaceSwapSettings = {...currentFaceSwapSettings, ...newSettings};
-    console.log("設定が更新されました:", currentFaceSwapSettings);
+    console.log("Your settings have been updated:", currentFaceSwapSettings);
 }
 
-// faceSwap関数の修正
+// Fixing the faceSwap function
 async function faceSwap() {
     try {
         core.executeAsModal(
             async () => {
+                console.log("Face Swap process started");
                 // 既存のコード（変更なし）...
                 const imaging = require("photoshop").imaging;
                 const tempFolder = await localFileSystem.getTemporaryFolder();
                 const tmpFile = await tempFolder.getEntry(myFileName);
                 if (!tmpFile) {
-                    console.log("ソース画像ファイルが選択されていません");
+                    console.log("No source image file selected");
                     return;
                 }
 
-                // 一時的にファイルを開いて画像データを取得
+                // Open a temporary file to get image data
                 const sourceDocument = await app.open(tmpFile);
                 const sourceImageObj = await imaging.getPixels({
                     documentID: sourceDocument._id,
@@ -182,7 +183,7 @@ async function faceSwap() {
                 });
                 sourceDocument.close();
 
-                // 現在のドキュメント（ターゲット画像）の取得
+                // Get the current document (target image)
                 const tartgetDocment = app.activeDocument;
                 const targetLayers = tartgetDocment.layers;
                 const targetLayer = targetLayers[targetLayers.length - 1];
@@ -196,13 +197,13 @@ async function faceSwap() {
                     base64: true,
                 });
 
-                // ソースとターゲットが同じでないことを確認
+                // Ensure source and target are not the same
                 if (sourceBase64 === targetBase64) {
-                    console.error("エラー: ソース画像とターゲット画像が同一です");
+                    console.error("Error: Source and target images are identical");
                     return;
                 }
 
-                // ここで関数を使ってリクエストデータを生成
+                // Here we use a function to generate the request data.
                 const requestData = createRequestData(sourceBase64, targetBase64);
 
                 // API呼び出し
@@ -235,25 +236,25 @@ async function faceSwap() {
                         const newLayer = tartgetDocment.activeLayers[0];
                         await newLayer.moveAbove(tartgetDocment.layers[0]);
                         newLayer.name = "Face Swap Result";
-                        console.log("Face Swap処理が完了しました");
+                        console.log("Face Swap process completed");
                     } else {
-                        console.error("APIからの応答に画像データがありません");
+                        console.error("No image data in response from API");
                     }
                 } catch (error) {
-                    console.error("API呼び出しエラー:", error);
+                    console.error("API call error:", error);
                 }
             },
             {
-                commandName: "Face Swap - データ取得",
+                commandName: "Face Swap - Data Acquisition",
                 timeOut: 30000
             }
         );
     } catch (err) {
-        console.error("Face Swap処理エラー:", err);
+        console.error("Face Swap error:", err);
     }
 }
 
-// loadFaceModels関数の修正 - モデル選択時の処理を追加
+// Modification of loadFaceModels function - Added processing when selecting a model
 async function loadFaceModels(){
     try {
         // APIにリクエストを送信
@@ -271,13 +272,13 @@ async function loadFaceModels(){
         const data = await response.json();
 
         // 取得したデータを確認
-        console.log("取得したfacemodelsデータ:", data);
+        console.log("Acquired facemodels data:", data);
 
         // faceModels要素を取得
         const faceModelsContainer = document.getElementById('faceModels');
 
         if (!faceModelsContainer) {
-            console.error("faceModels要素が見つかりません");
+            console.error("faceModels no  found");
             return;
         }
 
@@ -289,24 +290,24 @@ async function loadFaceModels(){
 
         // UXP用のドロップダウンを作成
         const dropdownHTML = `
-            <sp-dropdown id="model_select" placeholder="FaceModel if use">
+            <sp-picker id="model_select" placeholder="FaceModel if use">
                 <sp-menu slot="options">
                     <sp-menu-item value="none">none</sp-menu-item>
                     ${data && data.facemodels && Array.isArray(data.facemodels) ? 
                         data.facemodels.map(model => `<sp-menu-item value="${model}">${model}</sp-menu-item>`).join('') : ''}
                 </sp-menu>
-            </sp-dropdown>
+            </sp-picker>
         `;
 
         // HTMLをDOMに追加
         faceModelsContainer.innerHTML = dropdownHTML;
 
-        // ドロップダウンの選択変更イベントリスナーを追加
+        // Add dropdown selection change event listener
         const dropdown = document.getElementById('model_select');
         if (dropdown) {
             dropdown.addEventListener('change', (event) => {
                 const selectedModel = event.target.value;
-                console.log('選択されたモデル:', selectedModel);
+                console.log('selected model:', selectedModel);
 
                 // モデル選択に基づいて設定を更新
                 if (selectedModel && selectedModel !== 'none') {
@@ -327,19 +328,19 @@ async function loadFaceModels(){
             });
         }
 
-        console.log("faceModelsのロードが完了しました");
+        console.log("faceModels loaded");
     } catch (error) {
-        console.error("faceModelsのロード中にエラーが発生しました:", error);
+        console.error("error faceModels loading", error);
     }
 }
 
-// 初期ロード時にloadFaceModels関数を実行するイベントリスナーを追加
+//Add an event listener to run the loadFaceModels function on initial load.
 document.addEventListener('DOMContentLoaded', () => {
-    console.log("DOMContentLoadedイベント: faceModelsをロードします");
+    console.log("DOMContentLoaded: faceModels loading");
     loadFaceModels();
 });
 
-// Base64文字列をArrayBufferに変換するヘルパー関数
+// A helper function to convert a Base64 string to an ArrayBuffer
 function base64ToArrayBuffer(base64) {
     const binaryString = atob(base64);
     const bytes = new Uint8Array(binaryString.length);
@@ -349,31 +350,16 @@ function base64ToArrayBuffer(base64) {
     return bytes.buffer;
 }
 
-//url 文字列を受け取り、ブラウザOPENする関数
+//sample fuinc. not usesd
 function openUrl(url) {
     const shell = require('uxp').shell;
     shell.openExternal(url);
 }
 
-// ボタンクリックイベントを処理
+// click event listener
 document
     .getElementById("selectImageButton")
     .addEventListener("click", selectImage);
 document
     .getElementById("faceSwap")
     .addEventListener("click", faceSwap);
-
-
-/*
-photoshop 内でドキュメントなどの状態変更を行う場合は
-ExecuteAsModal 中で行う
-https://developer.adobe.com/photoshop/uxp/2022/ps_reference/
-
-async function makeDefaultDocument(executionContext) {
-  const app = require('photoshop').app;
-  let myDoc = await app.createDocument({preset: "My Web Preset 1"});
-}
-
-await require('photoshop').core.executeAsModal(makeDefaultDocument);
-
- */
